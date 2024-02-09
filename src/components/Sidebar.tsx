@@ -2,6 +2,7 @@ import { cn } from '@/utils/style';
 import Link from 'next/link';
 import { FC } from 'react';
 import { AiOutlineClose } from 'react-icons/ai';
+import IconButton from './IconButton';
 
 type SidebarProps = {
   close: () => void;
@@ -17,7 +18,7 @@ const Sidebar: FC<SidebarProps> = ({ close, isOpen }) => {
       )}
     >
       <div className="flex justify-end lg:hidden">
-        <AiOutlineClose className="size-5 cursor-pointer" onClick={close} />
+        <IconButton Icon={AiOutlineClose} onClick={close} />
       </div>
       <Link href="/" className="w-48 font-medium text-gray-600 hover:underline">
         홈
