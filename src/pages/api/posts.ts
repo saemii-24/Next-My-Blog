@@ -1,19 +1,21 @@
-import { Post, postRequest } from '@/types';
+// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import { Post, PostRequest } from '@/types';
 import { createClient } from '@/utils/supabase/server';
+import type { StorageError } from '@supabase/storage-js';
 import formidable from 'formidable';
 import { readFileSync } from 'fs';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-type Data = {
-  name: string;
-};
-
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Post>,
+  res: NextApiResponse<Post | StorageError>,
 ) {
+  if (req.method !== 'POST') return res.status(405).end();
+
   const form = formidable();
+
   const [fields, files] = await form.parse(req);
+
   let preview_image_url: string | null = null;
 
   const supabase = await createClient(req.cookies);
@@ -22,14 +24,13 @@ export default async function handler(
     const file = files.preview_image[0];
     const fileContent = await readFileSync(file.filepath);
     const fileName = `${file.newFilename}_${file.originalFilename}`;
-
     const { data: uploadData, error } = await supabase.storage
       .from('blog-image')
       .upload(fileName, fileContent, {
         contentType: file.mimetype ?? undefined,
       });
     if (error) {
-      res.status(403).end();
+      res.status(403).json(error);
     }
     if (uploadData?.path) {
       const { data } = await supabase.storage
@@ -40,18 +41,29 @@ export default async function handler(
   }
 
   const { title, category, tags, content } = fields;
+
   const postRequest = {
     title: title?.[0],
     category: category?.[0],
     tags: tags?.[0],
     content: content?.[0],
     preview_image_url,
-  } as postRequest;
+  } as PostRequest;
+
   const { data } = await supabase.from('Post').insert([postRequest]).select();
+  console.log(data);
+
   if (data && data.length === 1) {
     const { tags, ...reset } = data[0];
-    res.status(200).json({ ...reset, tags: JSON.parse(tags) as string[] });
-  } else {
-    res.status(500).end();
-  }
+    res.status(200).json({
+      ...reset,
+      tags: JSON.parse(tags) as string[],
+    });
+  } else res.status(500).end();
 }
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};

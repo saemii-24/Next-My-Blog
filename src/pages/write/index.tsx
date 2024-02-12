@@ -1,10 +1,10 @@
+import Input from '@/components/Input';
 import { MarkdownEditor } from '@/components/Markdown';
 import { createClient } from '@/utils/supabase/server';
 import { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import { FormEvent, useRef, useState } from 'react';
-import ReactSelect from 'react-select';
-import CreatableSelect from 'react-select/creatable';
+import ReactSelect from 'react-select/creatable';
 
 type WriteProps = {
   existingTags: string[];
@@ -15,24 +15,33 @@ export default function Write({
   existingTags,
   existingCategories,
 }: WriteProps) {
+  const router = useRouter();
+
+  const titleRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const [title, setTitle] = useState('');
+
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState('');
   const [content, setContent] = useState('');
-  const router = useRouter();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!titleRef.current?.value || titleRef.current.value.length === 0)
+      return alert('제목을 입력해주세요.');
+    if (category.length === 0) return alert('카테고리를 입력해주세요.');
+    if (tags.length === 0) return alert('태그를 입력해주세요.');
+    if (content.length === 0) return alert('글 내용을 입력해주세요.');
+
     const formData = new FormData();
-    formData.append('title', title);
+
+    formData.append('title', titleRef.current?.value ?? '');
     formData.append('category', category);
     formData.append('tags', tags);
     formData.append('content', content);
 
     if (fileRef.current?.files?.[0]) {
-      formData.append('preveiw_image', fileRef.current.files[0]);
+      formData.append('preview_image', fileRef.current.files[0]);
     }
 
     const response = await fetch('/api/posts', {
@@ -40,7 +49,9 @@ export default function Write({
       body: formData,
     });
 
-    const data = await response.json();
+    // const data = await response.json();
+    console.log(response);
+
     if (data.id) router.push(`/posts/${data.id}`);
   };
 
@@ -49,51 +60,40 @@ export default function Write({
       <h1 className="mb-8 text-2xl font-medium">새로운 글</h1>
       <form onSubmit={handleSubmit}>
         <div className="flex flex-col gap-3">
-          <input
-            type="text"
-            placeholder="제목"
-            className="rounded-md border border-gray-300 p-2 transition-all hover:border-gray-400"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <input
-            type="file"
-            placeholder="image/*"
-            className="rounded-md border border-gray-300 p-2 transition-all hover:border-gray-400"
-            ref={fileRef}
-          />
+          <Input type="text" placeholder="제목" ref={titleRef} />
+          <Input type="file" accept="image/*" ref={fileRef} />
           <ReactSelect
             options={existingCategories.map((category) => ({
               label: category,
               value: category,
             }))}
             placeholder="카테고리"
-            isMulti={false}
             onChange={(e) => e && setCategory(e.value)}
+            isMulti={false}
           />
-          <CreatableSelect
+          <ReactSelect
             options={existingTags.map((tag) => ({
               label: tag,
               value: tag,
             }))}
-            placeholder="태그"
-            isMulti={true}
             onChange={(e) =>
               e && setTags(JSON.stringify(e.map((e) => e.value)))
             }
+            placeholder="태그"
+            isMulti
           />
           <MarkdownEditor
             height={500}
             value={content}
             onChange={(s) => setContent(s ?? '')}
           />
-          <button
-            type="submit"
-            className="mt-4 w-full rounded-md bg-gray-800 py-2 text-white"
-          >
-            작성하기
-          </button>
         </div>
+        <button
+          type="submit"
+          className="mt-4 w-full rounded-md bg-gray-800 py-2 text-white"
+        >
+          작성하기
+        </button>
       </form>
     </div>
   );
