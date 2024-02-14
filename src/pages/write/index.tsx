@@ -1,7 +1,7 @@
+import Button from '@/components/Button';
 import Input from '@/components/Input';
 import { MarkdownEditor } from '@/components/Markdown';
-import { createClient } from '@/utils/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useCategories, useTags } from '@/utils/hooks';
 import { useRouter } from 'next/router';
 import { FormEvent, useId, useRef, useState } from 'react';
 import ReactSelect from 'react-select/creatable';
@@ -17,23 +17,8 @@ export default function Write() {
   const titleRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { data: existingCategories } = useQuery({
-    queryKey: ['categories'],
-    queryFn: async () => {
-      const supabase = createClient();
-      const { data } = await supabase.from('Post').select('category');
-      return Array.from(new Set(data?.map((d) => d.category)));
-    },
-  });
-
-  const { data: existingTags } = useQuery({
-    queryKey: ['tags'],
-    queryFn: async () => {
-      const supabase = createClient();
-      const { data } = await supabase.from('Post').select('tags');
-      return Array.from(new Set(data?.flatMap((d) => JSON.parse(d.tags))));
-    },
-  });
+  const { data: existingCategories } = useCategories();
+  const { data: existingTags } = useTags();
 
   const [category, setCategory] = useState('');
   const [tags, setTags] = useState('');
@@ -104,12 +89,9 @@ export default function Write() {
             onChange={(s) => setContent(s ?? '')}
           />
         </div>
-        <button
-          type="submit"
-          className="mt-4 w-full rounded-md bg-gray-800 py-2 text-white"
-        >
+        <Button type="submit" className="mt-4">
           작성하기
-        </button>
+        </Button>
       </form>
     </div>
   );
